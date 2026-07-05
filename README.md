@@ -373,14 +373,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - **React & Vite** communities for excellent development tools
 - **TailwindCSS** for beautiful and responsive design system
 
-## 📞 Support & Documentation
-
-For support and questions:
-- Create an issue in the repository
-- Check the backend README for API documentation
-- Review troubleshooting guides
-- Join our community discussions
-
 ---
 
 **Built for modern SOC teams with enterprise-grade security operations in mind.**
