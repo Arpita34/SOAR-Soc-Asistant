@@ -11,6 +11,7 @@ import { callN8nAgent, pingN8n } from '../../services/n8n';
 import GoogleSheetsService from '../../services/googleSheets';
 import backendService from '../../services/backend';
 import { askAgent, executeOption } from "../../services/agent";
+import { BACKEND_URL } from '../../config/api';
 
 
 const SecurityChatbot = () => {
@@ -712,7 +713,7 @@ const SecurityChatbot = () => {
           throw new Error(`Unknown self-enhancement action: ${actionType}`);
       }
 
-      const response = await fetch(`http://localhost:5000${endpoint}`, {
+      const response = await fetch(`${BACKEND_URL}${endpoint}`, {
         method: 'POST',
         headers: headers,
         body: JSON.stringify(payload)
@@ -908,7 +909,7 @@ const SecurityChatbot = () => {
       }
 
       // Call backend to generate PDF
-      const response = await fetch('http://localhost:5000/chatbot/pdf-report', {
+      const response = await fetch(`${BACKEND_URL}/chatbot/pdf-report`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

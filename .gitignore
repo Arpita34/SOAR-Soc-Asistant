@@ -1,9 +1,31 @@
-﻿node_modules/
+# Dependencies
+node_modules/
+backend/venv/
+venv/
+
+# Build output
 dist/
 build/
+
+# Secrets — NEVER commit these
 .env
-.env.local
+.env.*
+!.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+firebase-service-account.json
+backend/firebase-service-account.json
+*service-account*.json
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Logs & OS
 *.log
 .DS_Store
-backend/.env
 fake_history.ps1

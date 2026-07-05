@@ -3,11 +3,13 @@
  * This service provides methods to communicate with n8n workflows configured as agents
  */
 
+import { BACKEND_URL } from '../config/api';
+
 class N8nAgentService {
   constructor() {
     // Use backend proxy instead of direct n8n call to avoid CORS
-    this.agentUrl = 'http://localhost:5000/api/n8n/agent';
-    this.webhookUrl = 'http://localhost:5000/api/n8n/webhook';
+    this.agentUrl = `${BACKEND_URL}/api/n8n/agent`;
+    this.webhookUrl = `${BACKEND_URL}/api/n8n/webhook`;
   }
 
   /**
@@ -82,7 +84,7 @@ class N8nAgentService {
   async isAvailable() {
     try {
       // Use ping endpoint for availability check
-      const pingUrl = 'http://localhost:5000/api/n8n/ping';
+      const pingUrl = `${BACKEND_URL}/api/n8n/ping`;
       const response = await fetch(pingUrl, { method: 'GET' }).catch(() => null);
       if (!response) return false;
       const data = await response.json().catch(() => ({ ok: false }));

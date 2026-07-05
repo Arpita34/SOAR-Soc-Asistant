@@ -1,6 +1,8 @@
+import { BACKEND_URL } from '../config/api';
+
 export async function triggerN8n(payload, headers = {}) {
   // Use backend proxy instead of direct n8n call to avoid CORS
-  const backendUrl = 'http://localhost:5000/api/n8n/webhook';
+  const backendUrl = `${BACKEND_URL}/api/n8n/webhook`;
 
   const response = await fetch(backendUrl, {
     method: 'POST',
@@ -36,7 +38,7 @@ export function getN8nWebhookUrl() {
 
 export async function callN8nAgent(input, headers = {}) {
   // Use backend proxy instead of direct n8n call to avoid CORS
-  const backendUrl = 'http://localhost:5000/api/n8n/agent';
+  const backendUrl = `${BACKEND_URL}/api/n8n/agent`;
 
   const response = await fetch(backendUrl, {
     method: 'POST',
@@ -68,7 +70,7 @@ export async function callN8nAgent(input, headers = {}) {
 export async function pingN8n() {
   try {
     // Use backend proxy instead of direct n8n call to avoid CORS
-    const backendUrl = 'http://localhost:5000/api/n8n/ping';
+    const backendUrl = `${BACKEND_URL}/api/n8n/ping`;
     const response = await fetch(backendUrl, { method: 'GET' }).catch(() => null);
     if (!response) return { ok: false };
     const data = await response.json().catch(() => ({ ok: false }));

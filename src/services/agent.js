@@ -1,5 +1,7 @@
+import { BACKEND_URL } from '../config/api';
+
 export async function askAgent(message, context = {}) {
-  const r = await fetch("http://localhost:5000/chat/agent", {
+  const r = await fetch(`${BACKEND_URL}/chat/agent`, {
     method: "POST",
     headers: {"Content-Type":"application/json"},
     body: JSON.stringify({ message, context })
@@ -10,7 +12,7 @@ export async function askAgent(message, context = {}) {
 }
 
 export async function executeOption(action, data = {}, context = {}) {
-  const r = await fetch("http://localhost:5000/chat/execute", {
+  const r = await fetch(`${BACKEND_URL}/chat/execute`, {
     method: "POST",
     headers: {"Content-Type":"application/json"},
     body: JSON.stringify({ action, data, context })

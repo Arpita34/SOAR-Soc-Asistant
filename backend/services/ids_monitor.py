@@ -1,4 +1,3 @@
-from scapy.all import sniff, IP, TCP, UDP, ICMP, Raw
 import random
 import datetime
 import pandas as pd
@@ -7,15 +6,61 @@ import json
 import os
 import threading
 import time
+import logging
 import psutil
+
+logger = logging.getLogger(__name__)
+
+# Live packet capture (scapy) is optional. On Windows it also requires the
+# Npcap driver (https://npcap.com) and Administrator privileges. If any of that
+# is missing we must NOT crash the backend at import time — the IDS simply
+# reports itself as unavailable and every other feature keeps working.
+try:
+    from scapy.all import sniff, IP, TCP, UDP, ICMP, Raw, conf as _scapy_conf
+    SCAPY_AVAILABLE = True
+    SCAPY_ERROR = None
+except Exception as e:  # ImportError, or driver/runtime init failures
+    sniff = None
+    IP = TCP = UDP = ICMP = Raw = _scapy_conf = None
+    SCAPY_AVAILABLE = False
+    SCAPY_ERROR = str(e)
+    logger.warning(
+        "scapy is unavailable — live IDS packet capture is disabled (%s). "
+        "Install Npcap and run as Administrator to enable it.", SCAPY_ERROR
+    )
+
+# scapy can import successfully yet still be unable to capture. On Windows,
+# capture requires a libpcap provider (Npcap); without it conf.use_pcap is
+# False and sniff() fails at runtime. Detect that up front so the API can
+# report an honest status instead of "started" followed by a silent failure.
+if SCAPY_AVAILABLE and os.name == 'nt' and not getattr(_scapy_conf, 'use_pcap', False):
+    CAPTURE_AVAILABLE = False
+    CAPTURE_ERROR = (
+        "No packet-capture provider found. Install Npcap "
+        "(https://npcap.com, WinPcap-compatible mode) and run the backend "
+        "as Administrator to enable live IDS monitoring."
+    )
+    logger.warning(CAPTURE_ERROR)
+elif not SCAPY_AVAILABLE:
+    CAPTURE_AVAILABLE = False
+    CAPTURE_ERROR = SCAPY_ERROR
+else:
+    CAPTURE_AVAILABLE = True
+    CAPTURE_ERROR = None
 
 # Set paths relative to the script's directory
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 LOG_FILE = os.path.join(SCRIPT_DIR, "ids_logs.json")
 MODEL_PATH = os.path.join(SCRIPT_DIR, "nids_model_balanced.joblib")
 
-# Load the trained model
-model = load(MODEL_PATH)
+# Load the trained model (defensive: a missing/corrupt model must not crash boot)
+try:
+    model = load(MODEL_PATH)
+    MODEL_LOADED = True
+except Exception as e:
+    model = None
+    MODEL_LOADED = False
+    logger.warning("Failed to load NIDS model at %s: %s", MODEL_PATH, e)
 
 # Predefined feature names (used during training)
 FEATURES = [
@@ -33,7 +78,8 @@ class IDSMonitor:
         self.alerts_generated = 0
         self.start_time = time.time()
         self.monitor_thread = None
-        self.model_loaded = True  # Since model is loaded at module level
+        self.model_loaded = MODEL_LOADED
+        self.last_error = CAPTURE_ERROR
 
     def get_status(self):
         """Get current status of IDS monitor"""
@@ -44,6 +90,8 @@ class IDSMonitor:
         return {
             'is_monitoring': self.is_monitoring,
             'model_loaded': self.model_loaded,
+            'capture_available': CAPTURE_AVAILABLE,
+            'last_error': self.last_error,
             'stats': {
                 'packets_processed': self.packets_processed,
                 'alerts_generated': self.alerts_generated,
@@ -55,11 +103,32 @@ class IDSMonitor:
         }
 
     def start_monitoring(self):
-        """Start the IDS monitoring in a separate thread"""
+        """Start the IDS monitoring in a separate thread.
+
+        Returns a status dict so callers can surface why capture didn't start
+        (e.g. scapy/Npcap missing) instead of silently failing.
+        """
+        if not CAPTURE_AVAILABLE:
+            msg = CAPTURE_ERROR or (
+                "Live packet capture is unavailable on this host. "
+                "Install Npcap (https://npcap.com) and run the backend as "
+                "Administrator to enable IDS monitoring."
+            )
+            self.last_error = msg
+            logger.warning(msg)
+            return {'started': False, 'reason': msg}
+
+        if not self.model_loaded:
+            msg = "NIDS model failed to load; cannot start monitoring."
+            self.last_error = msg
+            logger.warning(msg)
+            return {'started': False, 'reason': msg}
+
         if not self.is_monitoring:
             self.is_monitoring = True
             self.monitor_thread = threading.Thread(target=self._monitor_loop, daemon=True)
             self.monitor_thread.start()
+        return {'started': True}
 
     def stop_monitoring(self):
         """Stop the IDS monitoring"""
@@ -73,7 +142,8 @@ class IDSMonitor:
         try:
             sniff(filter="ip", prn=self._process_packet, store=0, stop_filter=lambda x: not self.is_monitoring)
         except Exception as e:
-            print(f"Monitoring stopped: {e}")
+            self.last_error = str(e)
+            logger.warning("IDS monitoring stopped: %s", e)
         finally:
             self.is_monitoring = False
 
@@ -285,5 +355,9 @@ def process_packet(packet):
 
 
 if __name__ == "__main__":
-    print("🔍 IDS started. Sniffing real network traffic... Press Ctrl+C to stop.")
-    sniff(filter="ip", prn=process_packet, store=0)
+    if not SCAPY_AVAILABLE:
+        print(f"Live capture unavailable: {SCAPY_ERROR}")
+        print("Install Npcap (https://npcap.com) and run as Administrator.")
+    else:
+        print("🔍 IDS started. Sniffing real network traffic... Press Ctrl+C to stop.")
+        sniff(filter="ip", prn=process_packet, store=0)

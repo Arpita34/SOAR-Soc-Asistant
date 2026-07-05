@@ -6,6 +6,7 @@ import { auth } from '../firebase';
 import { setLoading, setError } from '../store/slices/authSlice';
 import CyberLogin from '../components/ui/cyber-login';
 import axios from 'axios';
+import { BACKEND_URL } from '../config/api';
 
 const Signup = () => {
   const dispatch = useDispatch();
@@ -26,7 +27,7 @@ const Signup = () => {
       await createUserWithEmailAndPassword(auth, email, password);
 
       // Add user to backend
-      await axios.post('http://localhost:5000/auth/signup', { email });
+      await axios.post(`${BACKEND_URL}/auth/signup`, { email });
 
       navigate('/login');
     } catch (error) {

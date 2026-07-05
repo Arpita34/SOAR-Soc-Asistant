@@ -41,7 +41,7 @@ class GroqService:
                         'content': prompt
                     }
                 ],
-                model='meta-llama/llama-guard-4-12b',
+                model='llama-3.1-8b-instant',
                 temperature=0.1,
                 max_tokens=1000
             )

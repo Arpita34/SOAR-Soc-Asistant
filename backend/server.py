@@ -971,11 +971,14 @@ def get_integrations_status():
 def start_ids_monitoring():
     """Start IDS monitoring"""
     try:
-        success = ids_monitor.start_monitoring()
-        if success:
+        result = ids_monitor.start_monitoring() or {}
+        if result.get('started'):
             return jsonify({'success': True, 'message': 'IDS monitoring started successfully'}), 200
         else:
-            return jsonify({'success': False, 'error': 'Failed to start IDS monitoring'}), 500
+            reason = result.get('reason', 'Failed to start IDS monitoring')
+            # Capture unavailable (e.g. Npcap missing) is a precondition failure,
+            # not a server crash — report it as 503 so the UI can explain it.
+            return jsonify({'success': False, 'error': reason}), 503
     except Exception as e:
         logger.error(f"Error starting IDS monitoring: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -985,11 +988,8 @@ def start_ids_monitoring():
 def stop_ids_monitoring():
     """Stop IDS monitoring"""
     try:
-        success = ids_monitor.stop_monitoring()
-        if success:
-            return jsonify({'success': True, 'message': 'IDS monitoring stopped successfully'}), 200
-        else:
-            return jsonify({'success': False, 'error': 'Failed to stop IDS monitoring'}), 500
+        ids_monitor.stop_monitoring()
+        return jsonify({'success': True, 'message': 'IDS monitoring stopped successfully'}), 200
     except Exception as e:
         logger.error(f"Error stopping IDS monitoring: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -1217,4 +1217,4 @@ def get_incidents_from_ids():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=int(os.getenv('PORT', 5000)))

@@ -2,9 +2,11 @@
  * BackendService - Service for communicating with the backend API
  */
 
+import { BACKEND_URL } from '../config/api';
+
 class BackendService {
   constructor() {
-    this.baseUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+    this.baseUrl = BACKEND_URL;
   }
 
   /**
